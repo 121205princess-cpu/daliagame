@@ -2,77 +2,77 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>냐미의 역습</title>
+    <title>냐미의 역습: 1인 무쌍</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; background: #222; overflow: hidden; font-family: 'Malgun Gothic'; color: white; }
+        body { margin: 0; background: #fff0f5; overflow: hidden; font-family: 'Malgun Gothic'; }
         #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; }
-        #dialogue { position: absolute; bottom: 50px; left: 10%; width: 80%; background: rgba(0,0,0,0.8); padding: 20px; border: 2px solid #ff69b4; display: none; pointer-events: auto; }
-        .btn { pointer-events: auto; position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); padding: 20px 40px; cursor: pointer; background: #ff69b4; border: none; color: white; font-weight: bold; font-size: 1.2rem; }
+        #dialogue { position: absolute; bottom: 50px; left: 10%; width: 80%; background: rgba(255, 255, 255, 0.9); padding: 20px; border: 3px solid #ff69b4; display: none; pointer-events: auto; color: #ff69b4; font-weight: bold; border-radius: 15px; }
+        .btn { pointer-events: auto; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; cursor: pointer; background: #ff69b4; border: none; color: white; font-weight: bold; border-radius: 30px; font-size: 1.5rem; }
+        .dmg-text { position: absolute; color: #ff1493; font-weight: bold; font-size: 20px; pointer-events: none; transition: 0.5s; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <h1 id="title" style="text-align:center; margin-top:50px;">냐미의 역습</h1>
+        <h1 id="title" style="text-align:center; color:#ff69b4; margin-top:50px;">냐미의 역습</h1>
         <div id="dialogue">요정: <span id="text">...</span></div>
-        <button class="btn" onclick="startFullGame()">왕국 입장하기</button>
+        <button class="btn" onclick="startGame()">왕국 입장하기</button>
     </div>
 
     <script>
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xfff0f5); // 예쁜 연핑크 배경
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
+        const renderer = new THREE.WebGLRenderer({antialias: true});
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // 1. 임시 모델 (박스와 공) 생성
-        const castle = new THREE.Mesh(new THREE.BoxGeometry(10, 20, 10), new THREE.MeshNormalMaterial());
-        scene.add(castle);
+        // 조명 (파스텔톤 효과)
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 5);
+        scene.add(light);
 
-        const nyami = new THREE.Mesh(new THREE.SphereGeometry(2), new THREE.MeshBasicMaterial({color: 0xff69b4}));
-        nyami.position.set(0, 5, 0);
+        // 냐미(공주) 생성
+        const nyami = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshStandardMaterial({color: 0xff69b4}));
         scene.add(nyami);
 
-        let enemies = [];
-        camera.position.set(0, 10, 40);
+        // 바닥
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0xe6e6fa}));
+        floor.rotation.x = -Math.PI/2;
+        scene.add(floor);
 
-        // 2. 컷씬 및 웨이브 로직
-        const introBGM = new Audio('assets/music_intro.mp3');
-        const battleBGM = new Audio('assets/music_battle.mp3');
+        camera.position.set(0, 5, 15);
 
-        function startFullGame() {
-            document.querySelector('.btn').style.display = 'none';
-            introBGM.play();
-            showDialogue("요정: 냐미... 일어나세요. 눈알 괴물들이 왕국을 포위했습니다.", () => {
-                showDialogue("요정: 왕국을 지켜야 합니다. 지금부터 전투를 시작합니다!", () => {
-                    introBGM.pause();
-                    battleBGM.loop = true;
-                    battleBGM.play();
-                    spawnEnemies(5); // 1 웨이브 시작
-                });
-            });
-        }
-
-        function spawnEnemies(count) {
-            for(let i=0; i<count; i++) {
-                const mon = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshBasicMaterial({color: 0x00ff00}));
-                mon.position.set((Math.random()-0.5)*30, 0, (Math.random()-0.5)*30);
-                scene.add(mon);
-                enemies.push(mon);
+        // 핑크 반짝이 파티클 이펙트
+        function createParticles(pos) {
+            for(let i=0; i<10; i++) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshBasicMaterial({color: 0xff1493}));
+                p.position.copy(pos);
+                scene.add(p);
+                setTimeout(() => scene.remove(p), 500);
             }
         }
 
-        function showDialogue(msg, callback) {
-            const box = document.getElementById('dialogue');
-            box.style.display = 'block';
-            document.getElementById('text').innerText = msg;
-            box.onclick = () => { box.style.display = 'none'; if(callback) callback(); };
+        // 데미지 텍스트
+        function showDamage(pos, dmg) {
+            const div = document.createElement('div');
+            div.className = 'dmg-text';
+            div.innerText = dmg;
+            document.body.appendChild(div);
+            // 3D 좌표를 2D 화면으로 변환하는 로직은 나중에 정교화
+            div.style.left = '50%'; div.style.top = '50%';
+            setTimeout(() => div.remove(), 500);
+        }
+
+        function startGame() {
+            document.querySelector('.btn').style.display = 'none';
+            document.getElementById('dialogue').style.display = 'block';
+            document.getElementById('text').innerText = "냐미... 일어나세요. 왕국이 눈알 괴물들에게 점령당했어요.";
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            // 냐미가 살짝 회전하는 애니메이션
-            nyami.rotation.y += 0.02;
             renderer.render(scene, camera);
         }
         animate();
