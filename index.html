@@ -1,83 +1,66 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <title>눈알 괴물 퇴치기</title>
-    <style>
-        body { background: #1a1a1a; color: white; text-align: center; font-family: 'Arial', sans-serif; }
-        #game-screen { width: 800px; height: 500px; border: 4px solid #333; margin: 20px auto; position: relative; background: #000; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .glitch { animation: glitchEffect 0.2s infinite; border-color: red !important; }
-        @keyframes glitchEffect { 0% { transform: translate(0); } 20% { transform: translate(-5px, 5px); } 100% { transform: translate(0); } }
-        button { padding: 15px 30px; font-size: 20px; cursor: pointer; background: #444; color: white; border: none; }
-        #damage-text { color: hotpink; font-weight: bold; font-size: 24px; position: absolute; pointer-events: none; }
-    </style>
-</head>
-<body>
+using System;
+using System.Collections.Generic;
 
-    <h1>왕국 방어전</h1>
-    <div id="game-screen">
-        <div id="display">
-            <p>눈알 괴물들이 왕국을 둘러쌌다...</p>
-            <button onclick="enterKingdom()">왕국 입장하기</button>
-        </div>
-    </div>
+public class Skill {
+    public string Name;
+    public double Cooldown;
+    public DateTime NextAvailable = DateTime.MinValue;
 
-    <script>
-        const display = document.getElementById('display');
-        const screen = document.getElementById('game-screen');
-        let wave = 0;
+    public Skill(string name, double cooldown) {
+        Name = name;
+        Cooldown = cooldown;
+    }
+}
 
-        // 1. 왕국 입장 및 요정 등장
-        function enterKingdom() {
-            display.innerHTML = "<p>요정: (얼굴은 보이지 않는다) 용사여, 나를 따라와! 눈알 괴물들을 퇴치하고 열쇠를 찾아야 해!</p>" +
-                                "<button onclick='startStory()'>스토리 시작하기</button>";
-        }
+public class Weapon {
+    public string Name;
+    public Skill ESkill;
+    public Skill QSkill;
 
-        // 2. 스토리 시작 및 음악 변경
-        function startStory() {
-            // 음악 재생 로직 (파일이 없으면 오류가 나므로 주석 처리함. 실제 파일 넣을 때 해제)
-            // new Audio('music_intro.mp3').play();
-            
-            display.innerHTML = "<p>괴물들을 물리치며 열쇠를 획득했다!</p>" +
-                                "<button onclick='runWave(1)'>1웨이브 시작</button>";
-        }
+    public Weapon(string name, string eName, double eCd, string qName, double qCd) {
+        Name = name;
+        ESkill = new Skill(eName, eCd);
+        QSkill = new Skill(qName, qCd);
+    }
+}
 
-        // 3. 웨이브 로직 (화면 글리치 포함)
-        function runWave(w) {
-            wave = w;
-            // 음악 변경
-            // new Audio('music_battle.mp3').play();
-            
-            screen.classList.add('glitch'); // 화면 불안정 시작
-            display.innerHTML = `<h2>웨이브 ${w}</h2><p>눈알 괴물들이 몰려온다!</p>` +
-                                `<button onclick="attack()">공격 (칼 휘두르기)</button>`;
-        }
+public class Program {
+    static List<Weapon> weapons = new List<Weapon> {
+        new Weapon("성검", "돌진 베기", 5.0, "심판의 낙뢰", 15.0),
+        new Weapon("마법 총", "속사 모드", 8.0, "마력 폭격", 20.0)
+    };
 
-        // 4. 전투: 데미지 출력 및 파티클 효과
-        function attack() {
-            let dmg = Math.floor(Math.random() * 50) + 50;
-            // 핑크색 반짝이 느낌의 텍스트 효과
-            const dmgEl = document.createElement('div');
-            dmgEl.id = 'damage-text';
-            dmgEl.innerHTML = `✨ ${dmg} 데미지! ✨`;
-            dmgEl.style.left = Math.random() * 600 + 100 + 'px';
-            dmgEl.style.top = Math.random() * 300 + 100 + 'px';
-            screen.appendChild(dmgEl);
-            
-            setTimeout(() => dmgEl.remove(), 800);
+    static int currentWeaponIdx = 0;
 
-            if (wave < 3) {
-                display.innerHTML += `<br><button onclick="runWave(${wave + 1})">다음 웨이브로 이동</button>`;
-            } else {
-                display.innerHTML = "<h2>최종 보스 출현!</h2><button onclick='endGame()'>보스 물리치기</button>";
+    public static void Main() {
+        while (true) {
+            var current = weapons[currentWeaponIdx];
+            Console.WriteLine($"[현재 무기: {current.Name}] (평타, E스킬, 궁극기, 무기교체, 종료)");
+            string input = Console.ReadLine();
+
+            if (input == "종료") break;
+
+            if (input == "평타") {
+                int dmg = new Random().Next(10, 20);
+                Console.WriteLine($"✨ 핑크색 반짝임과 함께 {dmg} 데미지! (효과음: 챙!)");
+            } 
+            else if (input == "E스킬" || input == "궁극기") {
+                Skill target = (input == "E스킬") ? current.ESkill : current.QSkill;
+                UseSkill(target);
+            } 
+            else if (input == "무기교체") {
+                currentWeaponIdx = (currentWeaponIdx == 1) ? 0 : 1;
+                Console.WriteLine($"🔄 무기가 {weapons[currentWeaponIdx].Name}으로 변경되었습니다.");
             }
         }
+    }
 
-        // 5. 엔딩
-        function endGame() {
-            screen.classList.remove('glitch');
-            display.innerHTML = "<h2>승리! 애니메이션 재생...</h2><button onclick='location.reload()'>처음으로</button>";
+    static void UseSkill(Skill s) {
+        if (DateTime.Now >= s.NextAvailable) {
+            Console.WriteLine($"🔥 {s.Name} 발동!!");
+            s.NextAvailable = DateTime.Now.AddSeconds(s.Cooldown);
+        } else {
+            Console.WriteLine($"❌ {s.Name} 쿨타임 중... ({Math.Ceiling((s.NextAvailable - DateTime.Now).TotalSeconds)}초)");
         }
-    </script>
-</body>
-</html>
+    }
+}
