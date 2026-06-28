@@ -1,46 +1,86 @@
-class GameEngine {
-    constructor() {
-        this.state = {
-            wave: 0,
-            currentWeapon: '칼',
-            isBossWave: false,
-            shakeIntensity: 0,
-            cooldowns: { eSkill: 0, ultimate: 0 }
-        };
-    }
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Eye Monster Kingdom</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>body { margin: 0; overflow: hidden; background: #000; }</style>
+</head>
+<body>
+<script>
+const config = {
+    type: Phaser.AUTO, width: 800, height: 600,
+    physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
+    scene: { preload, create, update }
+};
 
-    // 웨이브 진입 시 상태 업데이트 (불안정성 강화)
-    nextWave() {
-        this.state.wave++;
-        this.state.shakeIntensity = this.state.wave * 2; // 웨이브 높을수록 흔들림 증가
-        console.log(`웨이브 ${this.state.wave} 시작! 화면 불안정 레벨: ${this.state.shakeIntensity}`);
-        
-        if (this.state.wave === 3) {
-            this.state.isBossWave = true;
-            console.log("⚠️ 기괴한 보스 등장!");
-        }
-    }
+const game = new Phaser.Game(config);
+let player, cursors, enemies, music, wave = 0, glitchIntensity = 0;
 
-    // 무기/스킬 로직 (상태 기반 관리)
-    performAction(action) {
-        switch(action) {
-            case '평타':
-                return `⚔️ ${this.state.currentWeapon} 공격! [핑크색 반짝이 이펙트] 발생. 데미지: ${Math.floor(Math.random() * 50) + 50}`;
-            
-            case 'E스킬':
-                if (Date.now() < this.state.cooldowns.eSkill) return "❌ 쿨타임 중입니다.";
-                this.state.cooldowns.eSkill = Date.now() + 5000;
-                return this.state.currentWeapon === '칼' ? "⚡ 돌격!" : "🔫 원거리 사격!";
+function preload() {
+    this.load.audio('intro', 'music_intro.mp3');
+    this.load.audio('battle', 'music_battle.mp3');
+}
 
-            case '무기교체':
-                this.state.currentWeapon = (this.state.currentWeapon === '칼') ? '총' : '칼';
-                return `🔄 무기 변경됨: ${this.state.currentWeapon}`;
-        }
+function create() {
+    // 배경음악
+    music = this.sound.add('intro', { loop: true });
+    music.play();
+
+    // 시작 화면
+    this.titleText = this.add.text(400, 250, '왕국 입장하기', { fontSize: '40px', color: '#fff' }).setOrigin(0.5).setInteractive();
+    this.titleText.on('pointerdown', () => startGame(this));
+
+    enemies = this.physics.add.group();
+}
+
+function startGame(scene) {
+    scene.titleText.destroy();
+    music.stop();
+    music = scene.sound.add('battle', { loop: true });
+    music.play();
+    
+    // 플레이어(칼잡이)
+    player = scene.add.rectangle(400, 500, 40, 40, 0x00ff00);
+    scene.physics.add.existing(player);
+    
+    startWave(scene);
+}
+
+function startWave(scene) {
+    wave++;
+    glitchIntensity = wave * 0.5; // 웨이브 지날수록 화면 불안정 증가
+    
+    // 적 생성
+    for(let i=0; i < wave * 3; i++) {
+        let e = scene.add.circle(Math.random()*800, Math.random()*100, 20, 0xff0000);
+        scene.physics.add.existing(e);
+        enemies.add(e);
     }
 }
 
-// 사용 예시
-const game = new GameEngine();
-game.nextWave();
-console.log(game.performAction('평타'));
-console.log(game.performAction('무기교체'));
+function update(time, delta) {
+    if (!player) return;
+
+    // 화면 불안정 효과
+    if (wave > 0) {
+        this.cameras.main.shake(10, glitchIntensity);
+    }
+
+    // 공격 로직 (스페이스바)
+    if (Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey('SPACE'))) {
+        // 핑크 반짝이 파티클
+        let particles = this.add.particles(player.x, player.y, 'flare', {
+            tint: 0xff00ff, lifespan: 500, speed: 200, scale: {start: 0.5, end: 0}
+        });
+        this.time.delayedCall(200, () => particles.destroy());
+    }
+
+    // 적 이동 (플레이어 추적)
+    enemies.children.iterate(e => {
+        this.physics.moveToObject(e, player, 50 + (wave * 10));
+    });
+}
+</script>
+</body>
+</html>
