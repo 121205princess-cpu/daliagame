@@ -1,65 +1,46 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <title>Fantasy Action Game</title>
-    <style>
-        body { background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; overflow: hidden; }
-        #game-screen { width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .shake { animation: shake 0.5s infinite; }
-        @keyframes shake { 0%, 100% { transform: translate(0); } 25% { transform: translate(-5px, 5px); } 75% { transform: translate(5px, -5px); } }
-        #damage-text { position: absolute; color: hotpink; font-weight: bold; font-size: 24px; pointer-events: none; }
-    </style>
-</head>
-<body>
-
-<div id="game-screen">
-    <h1 id="status">웨이브: 0 (준비)</h1>
-    <button onclick="attack()">⚔️ 평타 (칼)</button>
-    <button onclick="eSkill()">⚡ E스킬 (총)</button>
-    <div id="log"></div>
-</div>
-
-<script>
-    let wave = 0;
-    let nextESkillTime = 0;
-
-    // 1. 공격 로직
-    function attack() {
-        const dmg = Math.floor(Math.random() * 50) + 50;
-        showDamage(dmg);
-        document.getElementById('log').innerText = "슈슉! 핑크빛 반짝이 이펙트 발생! 데미지: " + dmg;
+class GameEngine {
+    constructor() {
+        this.state = {
+            wave: 0,
+            currentWeapon: '칼',
+            isBossWave: false,
+            shakeIntensity: 0,
+            cooldowns: { eSkill: 0, ultimate: 0 }
+        };
     }
 
-    // 2. E스킬 (총) 로직
-    function eSkill() {
-        let now = Date.now() / 1000;
-        if (now >= nextESkillTime) {
-            document.getElementById('log').innerText = "🔫 탕! E스킬 발동!";
-            nextESkillTime = now + 5;
-        } else {
-            alert("쿨타임 중: " + Math.round(nextESkillTime - now) + "초 남음");
+    // 웨이브 진입 시 상태 업데이트 (불안정성 강화)
+    nextWave() {
+        this.state.wave++;
+        this.state.shakeIntensity = this.state.wave * 2; // 웨이브 높을수록 흔들림 증가
+        console.log(`웨이브 ${this.state.wave} 시작! 화면 불안정 레벨: ${this.state.shakeIntensity}`);
+        
+        if (this.state.wave === 3) {
+            this.state.isBossWave = true;
+            console.log("⚠️ 기괴한 보스 등장!");
         }
     }
 
-    // 3. 화면 흔들림 및 웨이브 로직
-    function nextWave() {
-        wave++;
-        document.getElementById('status').innerText = "웨이브: " + wave;
-        if (wave >= 1) document.getElementById('game-screen').classList.add('shake');
-        // 보스전 등 추가 로직 구현 위치
-    }
+    // 무기/스킬 로직 (상태 기반 관리)
+    performAction(action) {
+        switch(action) {
+            case '평타':
+                return `⚔️ ${this.state.currentWeapon} 공격! [핑크색 반짝이 이펙트] 발생. 데미지: ${Math.floor(Math.random() * 50) + 50}`;
+            
+            case 'E스킬':
+                if (Date.now() < this.state.cooldowns.eSkill) return "❌ 쿨타임 중입니다.";
+                this.state.cooldowns.eSkill = Date.now() + 5000;
+                return this.state.currentWeapon === '칼' ? "⚡ 돌격!" : "🔫 원거리 사격!";
 
-    // 4. 데미지 팝업
-    function showDamage(dmg) {
-        let d = document.createElement('div');
-        d.id = "damage-text";
-        d.style.left = (Math.random() * 40 + 30) + "%";
-        d.style.top = "20%";
-        d.innerText = dmg;
-        document.body.appendChild(d);
-        setTimeout(() => d.remove(), 500);
+            case '무기교체':
+                this.state.currentWeapon = (this.state.currentWeapon === '칼') ? '총' : '칼';
+                return `🔄 무기 변경됨: ${this.state.currentWeapon}`;
+        }
     }
-</script>
-</body>
-</html>
+}
+
+// 사용 예시
+const game = new GameEngine();
+game.nextWave();
+console.log(game.performAction('평타'));
+console.log(game.performAction('무기교체'));
