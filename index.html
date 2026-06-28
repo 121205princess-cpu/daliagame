@@ -1,66 +1,65 @@
-using System;
-using System.Collections.Generic;
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Fantasy Action Game</title>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; overflow: hidden; }
+        #game-screen { width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .shake { animation: shake 0.5s infinite; }
+        @keyframes shake { 0%, 100% { transform: translate(0); } 25% { transform: translate(-5px, 5px); } 75% { transform: translate(5px, -5px); } }
+        #damage-text { position: absolute; color: hotpink; font-weight: bold; font-size: 24px; pointer-events: none; }
+    </style>
+</head>
+<body>
 
-public class Skill {
-    public string Name;
-    public double Cooldown;
-    public DateTime NextAvailable = DateTime.MinValue;
+<div id="game-screen">
+    <h1 id="status">웨이브: 0 (준비)</h1>
+    <button onclick="attack()">⚔️ 평타 (칼)</button>
+    <button onclick="eSkill()">⚡ E스킬 (총)</button>
+    <div id="log"></div>
+</div>
 
-    public Skill(string name, double cooldown) {
-        Name = name;
-        Cooldown = cooldown;
-    }
-}
+<script>
+    let wave = 0;
+    let nextESkillTime = 0;
 
-public class Weapon {
-    public string Name;
-    public Skill ESkill;
-    public Skill QSkill;
-
-    public Weapon(string name, string eName, double eCd, string qName, double qCd) {
-        Name = name;
-        ESkill = new Skill(eName, eCd);
-        QSkill = new Skill(qName, qCd);
-    }
-}
-
-public class Program {
-    static List<Weapon> weapons = new List<Weapon> {
-        new Weapon("성검", "돌진 베기", 5.0, "심판의 낙뢰", 15.0),
-        new Weapon("마법 총", "속사 모드", 8.0, "마력 폭격", 20.0)
-    };
-
-    static int currentWeaponIdx = 0;
-
-    public static void Main() {
-        while (true) {
-            var current = weapons[currentWeaponIdx];
-            Console.WriteLine($"[현재 무기: {current.Name}] (평타, E스킬, 궁극기, 무기교체, 종료)");
-            string input = Console.ReadLine();
-
-            if (input == "종료") break;
-
-            if (input == "평타") {
-                int dmg = new Random().Next(10, 20);
-                Console.WriteLine($"✨ 핑크색 반짝임과 함께 {dmg} 데미지! (효과음: 챙!)");
-            } 
-            else if (input == "E스킬" || input == "궁극기") {
-                Skill target = (input == "E스킬") ? current.ESkill : current.QSkill;
-                UseSkill(target);
-            } 
-            else if (input == "무기교체") {
-                currentWeaponIdx = (currentWeaponIdx == 1) ? 0 : 1;
-                Console.WriteLine($"🔄 무기가 {weapons[currentWeaponIdx].Name}으로 변경되었습니다.");
-            }
-        }
+    // 1. 공격 로직
+    function attack() {
+        const dmg = Math.floor(Math.random() * 50) + 50;
+        showDamage(dmg);
+        document.getElementById('log').innerText = "슈슉! 핑크빛 반짝이 이펙트 발생! 데미지: " + dmg;
     }
 
-    static void UseSkill(Skill s) {
-        if (DateTime.Now >= s.NextAvailable) {
-            Console.WriteLine($"🔥 {s.Name} 발동!!");
-            s.NextAvailable = DateTime.Now.AddSeconds(s.Cooldown);
+    // 2. E스킬 (총) 로직
+    function eSkill() {
+        let now = Date.now() / 1000;
+        if (now >= nextESkillTime) {
+            document.getElementById('log').innerText = "🔫 탕! E스킬 발동!";
+            nextESkillTime = now + 5;
         } else {
-            Console.WriteLine($"❌ {s.Name} 쿨타임 중... ({Math.Ceiling((s.NextAvailable - DateTime.Now).TotalSeconds)}초)");
+            alert("쿨타임 중: " + Math.round(nextESkillTime - now) + "초 남음");
         }
     }
-}
+
+    // 3. 화면 흔들림 및 웨이브 로직
+    function nextWave() {
+        wave++;
+        document.getElementById('status').innerText = "웨이브: " + wave;
+        if (wave >= 1) document.getElementById('game-screen').classList.add('shake');
+        // 보스전 등 추가 로직 구현 위치
+    }
+
+    // 4. 데미지 팝업
+    function showDamage(dmg) {
+        let d = document.createElement('div');
+        d.id = "damage-text";
+        d.style.left = (Math.random() * 40 + 30) + "%";
+        d.style.top = "20%";
+        d.innerText = dmg;
+        document.body.appendChild(d);
+        setTimeout(() => d.remove(), 500);
+    }
+</script>
+</body>
+</html>
